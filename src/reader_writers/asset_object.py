@@ -17,6 +17,7 @@ class AssetObject:
     _unmodified_length: int
     _file_name: CharArray
     _file_content: bytes
+    alignment: int
     _file_modified: bool
     type_id: SInt64
 
@@ -31,12 +32,13 @@ class AssetObject:
             reader.data_offset + start_byte.value
         ), byte_length.value)
         file_name = raw_file_data.read(CharArray)
-        file_content = raw_file_data.read_bytes()
+        raw_file_data.read(UInt32)    # File length, not needed.
+        file_content = raw_file_data.read_bytes().rstrip(b'\x00')
         file_modified = False
         type_id = reader.read(SInt32)
         return cls(
             path_id, raw_file_data, start_byte, byte_length, file_name,
-            file_content, file_modified, type_id
+            file_content, 0, file_modified, type_id
         )
 
     def __len__(self) -> int:
@@ -73,7 +75,7 @@ class AssetObject:
         """Get the length of the raw file data."""
         if self._file_modified:
             char_array_size = 4 + len(self._file_name.value)
-            return len(self._file_content) + char_array_size
+            return len(self._file_content) + char_array_size + self.alignment
         return self._unmodified_length.value
 
     def write(self, writer: Writer):
@@ -88,6 +90,9 @@ class AssetObject:
         """Write the object itself to a stream."""
         if self._file_modified:
             writer.write(self._file_name)
+            writer.write(UInt32(len(self._file_content)))
             writer.write_bytes(self._file_content)
+            if self.alignment:
+                writer.write_bytes(b'\x00' * self.alignment)
         else:
             writer.write_bytes(self.raw_file_data.read_bytes())

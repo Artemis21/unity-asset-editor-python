@@ -141,4 +141,7 @@ class AssetFile:
         for asset_obj in self.objects:
             asset_obj.start_byte = UInt32(offset)
             offset += asset_obj.asset_length
+            alignment = (4 - (offset % 4)) % 4
+            asset_obj.alignment = alignment
+            offset += alignment
         return offset
