@@ -5,11 +5,10 @@ Unity asset editor in Python.
 ## Example usuage
 
 ```python
-from uae import AssetFile, Reader, Writer
+from uae import load, dump
 
 with open('test_file.assets', 'rb') as in_file:
-    reader = Reader(in_file)
-    asset_file = reader.read(AssetFile)
+    asset_file = load(in_file)
 
 # We can access attributes of the file.
 print(asset_file.header.unity_version)
@@ -28,6 +27,5 @@ asset_file.objects[0].file_content = b'New asset content.'
 
 # And recompile the asset file
 with open('test_file_edited.assets', 'wb') as out_file:
-    writer = Writer(out_file)
-    writer.write(asset_file)
+    dump(asset_file, out_file)
 ```
