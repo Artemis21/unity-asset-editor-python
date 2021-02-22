@@ -7,7 +7,7 @@ Unity asset editor in Python.
 ```python
 from src import AssetFile, Reader, Writer
 
-with open open('test_file.assets', 'rb') as in_file:
+with open('test_file.assets', 'rb') as in_file:
     reader = Reader(in_file)
     asset_file = reader.read(AssetFile)
 
