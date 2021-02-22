@@ -12,31 +12,25 @@ from ..streams import Reader, Writer
 class ExternalMeta:
     """Metadata describing an asset in another file."""
 
-    temp_empty: String
-    guid: bytes
-    file_type: SInt32
+    unknown_value: bytes
     path_name: String
 
     @classmethod
     def read(cls, reader: Reader) -> ExternalMeta:
         """Read external file metadata from a stream."""
-        temp_empty = reader.read(String)
-        guid = reader.read_bytes(16)
-        file_type = reader.read(SInt32)
+        # 21 bytes, most of which null, 9th of which sometimes not.
+        # More investigation needed.
+        unknown_value = reader.read_bytes(21)
         path_name = reader.read(String)
-        return cls(temp_empty, guid, file_type, path_name)
+        return cls(unknown_value, path_name)
 
     def __len__(self) -> int:
         """Get the number of bytes the object takes up."""
-        return sum(map(len, (
-            self.temp_empty, self.guid, self.file_type, self.path_name
-        )))
+        return sum(map(len, (self.unknown_value, self.path_name)))
 
     def write(self, writer: Writer):
         """Write the external file metadata to a stream."""
-        writer.write(self.temp_empty)
-        writer.write_bytes(self.guid)
-        writer.write(self.file_type)
+        writer.write_bytes(self.unknown_value)
         writer.write(self.path_name)
 
 
@@ -58,7 +52,7 @@ class ScriptMeta:
     def __len__(self) -> int:
         """Get the number of bytes the metadata takes up."""
         # +4 is to account for alignment.
-        return sum(map(len, (self.file_index, self.id_in_file))) + 4
+        return sum(map(len, (self.file_index, self.id_in_file)))
 
     def write(self, writer: Writer):
         """Write the script metadata to a stream."""

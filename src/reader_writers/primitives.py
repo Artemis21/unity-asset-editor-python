@@ -154,5 +154,6 @@ class CharArray(StringBase):
 
     def write(self, writer: streams.Writer):
         """Write a character array to a stream."""
+        writer.align(16)
         writer.write(UInt32(len(self.value)))
         writer.write_bytes(self.value.encode('utf-8'))

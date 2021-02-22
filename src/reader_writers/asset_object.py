@@ -14,7 +14,7 @@ class AssetObject:
     path_id: SInt64
     raw_file_data: Reader
     start_byte: UInt32
-    _unmodified_length: int
+    _unmodified_length: UInt32
     _file_name: CharArray
     _file_content: bytes
     alignment: int
@@ -46,7 +46,7 @@ class AssetObject:
         return sum(map(len, (
             self.path_id, self.start_byte, self._unmodified_length,
             self.type_id
-        ))) + 4    # Account for alignment.
+        )))
 
     @property
     def file_name(self) -> CharArray:
@@ -75,7 +75,7 @@ class AssetObject:
         """Get the length of the raw file data."""
         if self._file_modified:
             char_array_size = 4 + len(self._file_name.value)
-            return len(self._file_content) + char_array_size + self.alignment
+            return len(self._file_content) + char_array_size
         return self._unmodified_length.value
 
     def write(self, writer: Writer):
@@ -88,11 +88,12 @@ class AssetObject:
 
     def write_asset(self, writer: Writer):
         """Write the object itself to a stream."""
+        if self.alignment:
+            writer.write_bytes(b'\x00' * self.alignment)
         if self._file_modified:
             writer.write(self._file_name)
             writer.write(UInt32(len(self._file_content)))
             writer.write_bytes(self._file_content)
-            if self.alignment:
-                writer.write_bytes(b'\x00' * self.alignment)
         else:
+            self.raw_file_data.seek(0)
             writer.write_bytes(self.raw_file_data.read_bytes())

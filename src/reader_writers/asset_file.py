@@ -56,7 +56,7 @@ class Header:
             self.metadata_size, self.file_size, self.format_version,
             self.data_offset, self.big_endian, self.unity_version,
             self.target_platform_id, self.enable_type_tree
-        )))
+        ))) + 3
 
     def write(self, writer: Writer):
         """Write the header to a stream."""
@@ -101,7 +101,9 @@ class AssetFile:
 
     def array_length(self, array: list[Any]) -> int:
         """Calculate the number of bytes an array will take up."""
-        return 4 + sum(map(len, array))
+        # For some reason, it only works if we don't include the
+        # number indicating the length of the array.
+        return sum(map(len, array))
 
     def __len__(self) -> int:
         """Calculate the number of bytes the metadata will take up."""
@@ -117,17 +119,18 @@ class AssetFile:
 
     def write(self, writer: Writer):
         """Write the asset file to a stream."""
-        GAP = 11
         metadata_size = len(self)
+        data_offset = metadata_size + 32 - (metadata_size % 32)
         body_size = self.allocate_object_offsets()
-        self.header.file_size = UInt32(body_size + metadata_size + GAP)
+        self.header.file_size = UInt32(data_offset + body_size - 4)
         self.header.metadata_size = UInt32(metadata_size)
-        self.header.data_offset = UInt32(metadata_size + GAP)
+        self.header.data_offset = UInt32(data_offset)
         writer.write(self.header)
         for array in (
-                self.types, self.objects, self.scripts, self.externals,
-                self.ref_types):
+                self.types, self.objects, self.scripts, self.externals):
             writer.write_array(array)
+        writer.write_bytes(b'\x00' * 4)    # We need to do this, why?
+        writer.write_array(self.ref_types)
         writer.write(self.user_information)
         for asset_obj in self.objects:
             asset_obj.write_asset(writer)
@@ -141,7 +144,7 @@ class AssetFile:
         for asset_obj in self.objects:
             asset_obj.start_byte = UInt32(offset)
             offset += asset_obj.asset_length
-            alignment = (4 - (offset % 4)) % 4
+            alignment = (8 - (offset % 8)) % 8
             asset_obj.alignment = alignment
             offset += alignment
         return offset
